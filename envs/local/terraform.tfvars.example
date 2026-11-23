@@ -1,5 +1,11 @@
-# Copy to terraform.tfvars if you want to override defaults locally.
-aws_region          = "us-east-1"
-project_name        = "tf-oidc-identity"
-environment         = "local"
-localstack_endpoint = "http://localhost:4566"
+# Copy to terraform.tfvars to override defaults locally.
+# Supply keycloak_admin_password via environment variable instead of committing it:
+#   export TF_VAR_keycloak_admin_password="localdevadmin"
+aws_region                  = "us-east-1"
+project_name                = "tf-oidc-identity"
+environment                 = "local"
+localstack_endpoint         = "http://localhost:4566"
+keycloak_url                = "http://localhost:8080"
+keycloak_admin_user         = "admin"
+github_repository           = "gabeparra/tf-oidc-identity-stack"
+enable_upstream_broker_stub = true

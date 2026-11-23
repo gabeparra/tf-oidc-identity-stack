@@ -14,3 +14,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 15
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.2
+    container_name: tf-oidc-keycloak
+    command: ["start-dev", "--health-enabled=true"]
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9000:9000"
+    environment:
+      # Local-only dev bootstrap credentials (never used outside localhost).
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_BOOTSTRAP_ADMIN_PASSWORD:-localdevadmin}
+      - KC_HTTP_ENABLED=true
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 25

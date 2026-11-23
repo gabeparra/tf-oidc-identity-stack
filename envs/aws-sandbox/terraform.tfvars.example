@@ -1,0 +1,6 @@
+aws_region        = "us-east-1"
+project_name      = "tf-oidc-identity"
+environment       = "sandbox"
+audit_bucket_name = "replace-with-globally-unique-audit-bucket-name"
+github_repository = "gabeparra/tf-oidc-identity-stack"
+enable_network    = false

@@ -31,3 +31,38 @@ variable "localstack_endpoint" {
   type        = string
   default     = "http://localhost:4566"
 }
+
+variable "keycloak_url" {
+  description = "Local Keycloak base URL."
+  type        = string
+  default     = "http://localhost:8080"
+}
+
+variable "keycloak_admin_user" {
+  description = "Keycloak bootstrap admin username."
+  type        = string
+  default     = "admin"
+}
+
+variable "keycloak_admin_password" {
+  description = "Keycloak bootstrap admin password. Supply via TF_VAR_keycloak_admin_password."
+  type        = string
+  sensitive   = true
+}
+
+variable "github_repository" {
+  description = "GitHub owner/repo permitted to assume the CI plan role via GitHub OIDC."
+  type        = string
+  default     = "gabeparra/tf-oidc-identity-stack"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
+    error_message = "github_repository must be formatted as owner/repo."
+  }
+}
+
+variable "enable_upstream_broker_stub" {
+  description = "Create a disabled placeholder upstream OIDC broker (Entra-style) in local Keycloak."
+  type        = bool
+  default     = true
+}

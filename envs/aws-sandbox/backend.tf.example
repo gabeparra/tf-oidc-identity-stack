@@ -1,0 +1,11 @@
+# Rename to backend.tf (or pass -backend-config) before applying against a real AWS account.
+# Never commit real account IDs or bucket names tied to private accounts.
+terraform {
+  backend "s3" {
+    bucket       = "REPLACE-WITH-YOUR-STATE-BUCKET"
+    key          = "aws-sandbox/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+}

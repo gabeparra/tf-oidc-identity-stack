@@ -31,6 +31,12 @@ variable "noncurrent_version_expiration_days" {
   }
 }
 
+variable "kms_key_arn" {
+  description = "Optional KMS customer-managed key ARN for SSE-KMS. When null, free SSE-S3 (AES256) is used."
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "Additional tags applied to the bucket."
   type        = map(string)

@@ -6,5 +6,9 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.80"
     }
+    keycloak = {
+      source  = "keycloak/keycloak"
+      version = "~> 5.11"
+    }
   }
 }
