@@ -1,0 +1,16 @@
+services:
+  localstack:
+    # Pinned to 4.14.0 (last open-source 4.x release before auth-token requirement).
+    image: docker.io/localstack/localstack:4.14.0
+    container_name: tf-oidc-localstack
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      - SERVICES=s3,iam,sts,ec2,dynamodb,kms
+      - AWS_DEFAULT_REGION=us-east-1
+      - PERSISTENCE=0
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 15

@@ -1,0 +1,23 @@
+# Terraform local working directory and state files (never commit state)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Variable files that may carry local or account-specific values
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Local runtime artifacts
+.env
+.localstack/
