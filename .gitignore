@@ -1,5 +1,6 @@
 # Terraform local working directory and state files (never commit state)
 **/.terraform/
+modules/**/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfplan

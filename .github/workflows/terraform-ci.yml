@@ -1,0 +1,96 @@
+name: Terraform CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    name: Format, Validate, Lint, Scan, and Module Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive -diff
+
+      - name: Validate root modules
+        run: |
+          for dir in bootstrap/local envs/local envs/aws-sandbox; do
+            echo "==> Validating ${dir}"
+            terraform -chdir="${dir}" init -backend=false -input=false
+            terraform -chdir="${dir}" validate
+          done
+
+      - name: Run native Terraform module tests
+        run: |
+          for mod in modules/s3-secure-bucket modules/network modules/iam-oidc modules/keycloak-oidc; do
+            echo "==> Testing ${mod}"
+            terraform -chdir="${mod}" init -backend=false -input=false
+            terraform -chdir="${mod}" test
+          done
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.65.0
+
+      - name: Run TFLint
+        run: |
+          tflint --init
+          tflint --recursive
+
+      - name: Run Trivy IaC security scan
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+  local-e2e-and-drift:
+    name: LocalStack + Keycloak E2E Apply and Drift Test
+    runs-on: ubuntu-latest
+    needs: static-checks
+    services:
+      localstack:
+        image: localstack/localstack:4.14.0
+        ports:
+          - 4566:4566
+        env:
+          SERVICES: s3,iam,sts,ec2,dynamodb,kms
+          AWS_DEFAULT_REGION: us-east-1
+          PERSISTENCE: 0
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+
+      - name: Start ephemeral Keycloak
+        run: |
+          docker run -d --name ci-keycloak \
+            -p 8080:8080 -p 9000:9000 \
+            -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+            -e KC_BOOTSTRAP_ADMIN_PASSWORD=localdevadmin \
+            -e KC_HTTP_ENABLED=true \
+            quay.io/keycloak/keycloak:26.8.2 \
+            start-dev --health-enabled=true
+
+      - name: Run end-to-end bootstrap, apply, drift, and OIDC assertions
+        run: ./scripts/verify-local-e2e.sh

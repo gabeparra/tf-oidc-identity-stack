@@ -1,0 +1,115 @@
+name: Terraform Drift Detection
+
+on:
+  schedule:
+    # Weekday drift check at 13:00 UTC.
+    - cron: "0 13 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: "Environment to check for drift"
+        required: true
+        default: local-ephemeral
+        type: choice
+        options:
+          - local-ephemeral
+          - aws-sandbox
+
+permissions:
+  contents: read
+
+jobs:
+  local-ephemeral-drift:
+    name: Ephemeral LocalStack Drift Harness
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || inputs.target_env == 'local-ephemeral'
+    services:
+      localstack:
+        image: localstack/localstack:4.14.0
+        ports:
+          - 4566:4566
+        env:
+          SERVICES: s3,iam,sts,ec2,dynamodb,kms
+          AWS_DEFAULT_REGION: us-east-1
+          PERSISTENCE: 0
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+
+      - name: Start ephemeral Keycloak
+        run: |
+          docker run -d --name drift-keycloak \
+            -p 8080:8080 -p 9000:9000 \
+            -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+            -e KC_BOOTSTRAP_ADMIN_PASSWORD=localdevadmin \
+            -e KC_HTTP_ENABLED=true \
+            quay.io/keycloak/keycloak:26.8.2 \
+            start-dev --health-enabled=true
+
+      - name: Run drift injection and reconciliation check
+        run: ./scripts/verify-local-e2e.sh
+
+  aws-sandbox-drift:
+    name: AWS Sandbox Drift Check (OIDC, Opt-In Only)
+    runs-on: ubuntu-latest
+    # Explicitly gated behind repo variable AWS_SANDBOX_DRIFT_ENABLED == 'true'
+    # so nothing touches a real AWS account until intentionally enabled.
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.target_env == 'aws-sandbox' &&
+      vars.AWS_SANDBOX_DRIFT_ENABLED == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via GitHub OIDC (no static keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DRIFT_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.9
+          terraform_wrapper: false
+
+      - name: Initialize aws-sandbox remote backend
+        run: |
+          terraform -chdir=envs/aws-sandbox init -input=false \
+            -backend-config="bucket=${{ vars.AWS_TFSTATE_BUCKET }}" \
+            -backend-config="key=aws-sandbox/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION || 'us-east-1' }}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: Detect infrastructure drift
+        id: drift
+        run: |
+          set +e
+          terraform -chdir=envs/aws-sandbox plan \
+            -input=false \
+            -no-color \
+            -detailed-exitcode \
+            -var="audit_bucket_name=${{ vars.AWS_AUDIT_BUCKET_NAME }}"
+          EXIT_CODE=$?
+          set -e
+
+          if [ "${EXIT_CODE}" -eq 0 ]; then
+            echo "No drift detected."
+          elif [ "${EXIT_CODE}" -eq 2 ]; then
+            echo "::error::Infrastructure drift detected in envs/aws-sandbox. Review the plan output and reconcile."
+            exit 2
+          else
+            echo "::error::Terraform plan failed with exit code ${EXIT_CODE}."
+            exit "${EXIT_CODE}"
+          fi

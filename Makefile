@@ -3,7 +3,7 @@ TF_DIR  ?= envs/local
 KC_PASS ?= localdevadmin
 AWS_LOCAL := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 aws --endpoint-url=http://localhost:4566
 
-.PHONY: up down logs bootstrap init fmt fmt-check validate plan apply destroy state lint scan check aws-ls
+.PHONY: up down logs bootstrap init fmt fmt-check validate plan apply destroy state lint-init lint scan test test-e2e check aws-ls
 
 up:
 	$(COMPOSE) up -d
@@ -45,13 +45,26 @@ destroy:
 state:
 	terraform -chdir=$(TF_DIR) state list
 
+lint-init:
+	tflint --init
+
 lint:
 	tflint --recursive
 
 scan:
-	trivy config --severity HIGH,CRITICAL .
+	trivy config --severity HIGH,CRITICAL --exit-code 1 .
 
-check: fmt-check validate lint scan
+test:
+	@set -e; for mod in modules/s3-secure-bucket modules/network modules/iam-oidc modules/keycloak-oidc; do \
+		echo "==> terraform test $$mod"; \
+		terraform -chdir=$$mod init -backend=false -input=false >/dev/null; \
+		terraform -chdir=$$mod test; \
+	done
+
+test-e2e:
+	./scripts/verify-local-e2e.sh
+
+check: fmt-check validate test lint scan
 
 aws-ls:
 	$(AWS_LOCAL) s3 ls
