@@ -97,3 +97,7 @@ make down        # Stops local containers
 - [docs/MILESTONE_1_LAB.md](docs/MILESTONE_1_LAB.md): Core workflow, state inspection, drift drill, `moved {}` refactoring, and `import {}`.
 - [docs/MILESTONE_2_LAB.md](docs/MILESTONE_2_LAB.md): Remote state separation, native S3 lockfiles, `for_each` patterns, OIDC trust policies, and Keycloak IaC.
 - [docs/DESIGN_NOTES.md](docs/DESIGN_NOTES.md): Design notes and technical walkthrough covering state management, module boundaries, drift detection, failure recovery, and identity security tradeoffs.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Copyright (c) 2026 Mariano Gabriel Parra.
