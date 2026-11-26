@@ -2,6 +2,8 @@
 
 A local-first Terraform lab and reference architecture combining least-privilege AWS IAM OIDC federation, VPC networking, S3 remote state with native lockfiles, and declarative Keycloak identity configuration.
 
+**Status:** `Maintained` - local-first Terraform, LocalStack, and Keycloak OIDC federation reference stack.
+
 Everything runs end to end on localhost using LocalStack and Keycloak in containers at zero cloud cost, while keeping a clean root module (`envs/aws-sandbox/`) ready for real AWS accounts with no static AWS access keys.
 
 ## Architecture
