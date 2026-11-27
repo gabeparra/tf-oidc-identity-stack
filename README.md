@@ -4,6 +4,8 @@ A local-first Terraform lab and reference architecture combining least-privilege
 
 **Status:** `Maintained` - local-first Terraform, LocalStack, and Keycloak OIDC federation reference stack.
 
+> A personal lab for learning Terraform state, module and identity patterns. It has only ever run against LocalStack and a local Keycloak, not a real AWS account, so `envs/aws-sandbox/` shows the shape of a real deployment rather than one that's been battle-tested.
+
 Everything runs end to end on localhost using LocalStack and Keycloak in containers at zero cloud cost, while keeping a clean root module (`envs/aws-sandbox/`) ready for real AWS accounts with no static AWS access keys.
 
 ## Architecture
